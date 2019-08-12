@@ -39,7 +39,7 @@
 
 
 ## LICENSE
-[MIT License](https://github.com/sfyc23/EverydayWechat/blob/master/LICENSE)
+[MIT License](https://github.com/sfyc23/WechatAddGroupHelper/blob/master/LICENSE)
 
 
 
