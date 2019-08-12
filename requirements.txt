@@ -1,0 +1,4 @@
+itchat==1.3.10
+requests
+apscheduler
+yagmail
