@@ -2,3 +2,5 @@
 __pycache__
 itchat.pkl
 QR.png
+.gitignore
+account_info.txt

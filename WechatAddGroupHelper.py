@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 """
 Project: HelloWorldPython
 Creator: DoubleThunder
 Create time: 2019-07-02 20:43
-微信加群助手，实现多个功能：
+微信加群助手，实现两功能：
 1、通过关键字自动同意加好友。
 2、通过关键字自动邀请好友入群。
     再添加多个群。
@@ -16,22 +16,15 @@ apscheduler
 yagmail
 requests
 """
-from __future__ import unicode_literals
 import time
 import string
 import random
 import re
 import hashlib
-
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
-
+from urllib import parse
 from datetime import datetime
 from collections import OrderedDict
 import platform
-import sys
 
 import itchat
 from itchat.content import (
@@ -39,12 +32,9 @@ from itchat.content import (
     TEXT,
     FRIENDS
 )
-
 from apscheduler.schedulers.blocking import BlockingScheduler
 import requests
 import yagmail
-
-is_py2 = (sys.version_info[0] == 2)  # : 是不是 Python 2.x?
 
 # start ----------------------------------- 邮件提醒功能 ----------------------------------- start
 IS_OPEN_EMAIL_NOTICE = True  # 是否开启邮箱提醒功能
@@ -69,23 +59,23 @@ MSG_SUFFIX = u" ——来自小鲲的 auto reply"  # 自动回复的后缀(可�
 
 
 # start ----------------------------------- 群名称与关键词设置 ----------------------------------- start
-IS_OPEN_ADD_GROUP = True  # 是否开启自动邀请人加群功能。
+IS_OPEN_ADD_GROUP = True
 # 群聊名称，可设置多个。注意顺序（前面的群人数已满(500)，才会邀请后面的群） 注意：必须要把需要的群聊保存到通讯录
-group_name_list = [u'星群主', u'萌萌哒']
-add_group_keys = u'加群，拉群，进群'  # 加群关键词，多个词用「，」分隔
+group_name_list = ['EverydayWechat 交流1群', 'EverydayWechat 交流2群']
+add_group_keys = '加群，拉群，进群'  # 加群关键词，多个词用「，」分隔
 IS_ENTER_MULT_GROUP = True  # 是否可以加入多个群组，如果为 True，用户重复发送『加群』，则会依次邀请加入下一个群组
 
 IS_AUTO_ADD_FRIEND = True
-add_friend_keys = u'github，加群，大佬，女装，大神，交流，python'  # 通过好友关键词，多个词用「，」分隔
+add_friend_keys = 'github，加群，大佬，女装，大神，交流，python'  # 通过好友关键词，多个词用「，」分隔
 #   end ----------------------------------- 群名称与关键词设置 ----------------------------------- end
 
-
 # start ----------------------------------- 提醒设置 ----------------------------------- start
-note_first_meet_text = u'我是智障时长两年半的个人沙雕机器人小鲲，喜欢复制、粘贴、BUG、掉头发。发送关键词：『加群』则会自动邀请你入群！ '  # 加群成功后的第一句话
-note_add_repeat_answer = u'请不要重复加群！'
-note_auto_reply_text = u'我是智障时长两年半的个人沙雕机器人小鲲，请到群里再聊。'  # 默认的自动回复
+
+note_first_meet_text = '我是智障时长两年半的个人沙雕机器人小鲲，喜欢复制、粘贴、BUG、掉头发。发送关键词：『加群』则会自动邀请你入群！ '  # 加群成功后的第一句话
+note_add_repeat_answer = '请不要重复加群！'
+note_auto_reply_text = '我是智障时长两年半的个人沙雕机器人小鲲，请到群里再聊。'  # 默认的自动回复
 # 新用户入群发送的公告
-note_invite_welcome = u'''@{atname}\u2005欢迎加入群，请查看群规...
+note_invite_welcome = '''@{atname}\u2005欢迎加入群，请查看群规...
 
 此群禁止发广告。
 无法登录网页微信的问题，无有效解决办法。
@@ -95,27 +85,31 @@ note_invite_welcome = u'''@{atname}\u2005欢迎加入群，请查看群规...
 1. 别问毫无意义的问题：『群里又xxx大佬吗？、在吗？、有没有人会？』
 2. 用词准确，问题明确。
 3. 描述清晰，信息充足：准确有效的信息、做过什么尝试、想要得到什么回答。'''
-note_invite_info = u'『{}』邀请『{}』加入了群聊:『{}』'
 #   end ----------------------------------- 提醒设置 ----------------------------------- end
 
 # start ----------------------------------- 一些正则表达式 ----------------------------------- start
-uid_list_compile = re.compile(
-    r"(?<!'Self': )\<ChatroomMember:.*?'UserName': u?'(.*?)'")  # 筛选出群所有用户的 uid  # 筛选出群所有用户的 uid
+uidlist_compile = re.compile(r"(?<!'Self': )\<ChatroomMember:.*?'UserName': '(.*?)', 'NickName'.*?")  # 筛选出群所有用户的 uid
 friend_content_compile = re.compile(r'content="(.*?)"')  # 判断消息是否为加好友的请求
-add_friend_compile = re.compile(u'|'.join(i.strip() for i in
-                                          re.split(r'[,，]+', add_friend_keys) if i), re.I)  # 通过关键词同意加好友请求
-add_group_compile = re.compile(u'|'.join(i.strip() for i in
-                                         re.split(r'[,，]+', add_group_keys) if i), re.I)  # 通过关键词同意邀请好友加群
-invite_compile = re.compile(r'"?(你|.*?)"?邀请"(.*?)"加入了群聊\s*$')  # 判断此群通知是否为新成员加群
+add_friend_compile = re.compile('|'.join(i.strip() for i in
+                                         re.split(r'[,，]+', add_friend_keys) if i), re.I)  # 通过关键词同意加好友请求
+add_group_compile = re.compile('|'.join(i.strip() for i in
+                                        re.split(r'[,，]+', add_group_keys) if i), re.I)  # 通过关键词同意邀请好友加群
+invite_compile = re.compile(r'邀请"(.*?)"加入了群聊\s*$')  # 判断此群通知是否为新成员加群
+note_remove_complie = re.compile(r'^你将"(.*?)"移出了群聊$')
 #   end ----------------------------------- 一些正则表达式 ----------------------------------- end
 
 
 # start ----------------------------------- 一些其他设置 ----------------------------------- start
 group_infos_dict = OrderedDict()  # 群信息字典
 wechat_nick_name = ''  # 此微信号的名称
+wechat_uuid = '' # 此微信号的 uuid
+login_time = datetime.now()  # 登录时间
+time_delta_compile = r'(?:(\d+)\s+days?,)?\s*(\d{1,2}):(\d{1,2}):(\d{1,2})'  # 项目登录时间间隔
+
 LONG_TEXT = string.ascii_letters + string.digits + string.punctuation  # 长字符，用于获取随机字符
-HEART_BEAT_INTERVAL_MINUTES = 15  # 长连接心跳时间间隔
-UPDATE_GROUP_INFO_INTERVAL_MINUTES = 60 * 6  # 群成员自动更新时间，会有人退群的啊，这样前面的群可以不会满 500 人。
+HEART_BEAT_INTERVAL_MINUTES = 30  # 心跳时间间隔（分钟）
+UPDATE_GROUP_INFO_INTERVAL_MINUTES = 8 * 60  # 定时更新群成员时间间隔（分钟）
+black_uuid_list = []  # 黑名单用户集合，将群组里的某个人踢出时，则会加入这个名单。重启后失效。
 
 
 #   end ----------------------------------- 一些其他设置 ----------------------------------- end
@@ -123,93 +117,112 @@ UPDATE_GROUP_INFO_INTERVAL_MINUTES = 60 * 6  # 群成员自动更新时间，会
 
 def init_info():
     """ 初始化数据 """
-    global wechat_nick_name
+    global wechat_nick_name  # 你登录微信名
+    global wechat_uuid # 微信uid。
     global IS_OPEN_EMAIL_NOTICE
+    global login_time  # 登录时间记录
 
+    itchat.get_friends(update=True)
+    itchat.get_chatrooms(update=True)
+
+    login_time = datetime.now()
     wechat_nick_name = itchat.search_friends()['NickName']  # 获取此微信号的昵称
-    set_note(u'微信号『{}』登录成功！'.format(wechat_nick_name))
+    wechat_uuid = itchat.search_friends()['UserName']  # 获取此微信号的uid。
+
+    set_note('微信号『{}』登录成功！'.format(wechat_nick_name))
 
     try:
         if IS_OPEN_EMAIL_NOTICE:
             yag.login()
-            print(u'邮件提醒功能已开启。')
+            print('邮件提醒功能已开启。')
         else:
-            print(u'邮件提醒功能已关闭。')
+            print('邮件提醒功能已关闭。')
     except Exception as exception:
         # print(str(exception))
-        print(u'邮件配置有错，已关闭邮件提醒功能。')
+        print('邮件配置有错，已关闭邮件提醒功能。')
         IS_OPEN_EMAIL_NOTICE = False
 
     if IS_AUTO_ADD_FRIEND:
-        print(u'自动同意添加好友已开启，同意关键词：{}。'.format(add_friend_keys))
+        print('自动同意添加好友已开启，同意关键词：{}。'.format(add_friend_keys))
     else:
-        print(u'自动同意添加好友已关闭。')
+        print('自动同意添加好友已关闭。')
 
-    if IS_OPEN_ADD_GROUP:  # 已开启邀请功能
+    if IS_OPEN_AUTO_REPLY:
+        print('自动回复已开启。')
+    else:
+        print('自动回复已关闭。')
 
-        print(u'自动邀请群聊功能已开启，加群关键词：{}'.format(add_group_keys))
+    if not IS_OPEN_ADD_GROUP:  # 已开启邀请功能
+        print('自动邀请群聊功能已关闭。')
+    else:
+        set_note('自动邀请群聊功能已开启，加群关键词：{}。'.format(add_group_keys))
         itchat.get_chatrooms(update=True)  # 更新群聊数据。
         for group_name in group_name_list:
             group_list = itchat.search_chatrooms(name=group_name)  # 通过群聊名获取群聊信息
             group_info = {}
             if group_list:
                 group_uuid = group_list[0]['UserName']
-                group = itchat.update_chatroom(group_uuid, detailedMember=True)
-                group_uuid = group['UserName']
+                group = itchat.update_chatroom(group_uuid, detailedMember=True)  # 通过群id更新群名单
+                group_uuid = group['UserName']  # 群聊 id
                 group_info['group_name'] = group_name  # 群聊名称
                 group_info['group_uuid'] = group_uuid  # 群聊 uuid
                 count = len(group['MemberList'])  # 群聊人数
                 group_info['count'] = count
-                member_uid_list = uid_list_compile.findall(str(group))  # 根据正则取出群组里所有用户的 uuid。
+                member_uid_list = uidlist_compile.findall(str(group))  # 根据正则取出群组里所有用户的 uuid。也可以用循环的方式。
                 if member_uid_list:
                     group_info['member_uid_list'] = member_uid_list
                 group_infos_dict[group_uuid] = group_info
-                print(u'群聊『{}』已注册，人数为：{}。'.format(group_name, count))
+                set_note('群聊『{}』已注册，人数为：{}。'.format(group_name, count))
 
             else:
-                note = u'没有找到群聊「{}」 注意：必须要把需要的群聊保存到通讯录。'.format(group_name)
+                note = '没有找到群聊「{}」 注意：必须要把需要的群聊保存到通讯录。'.format(group_name)
                 set_note(note)
                 break
-    else:
-        print(u'自动邀请群聊功能已关闭。')
-    print(u'项目初始化已完成...开始正常工作。')
+
+    print('项目初始化已完成...开始正常工作。')
     print('-' * 50)
 
 
-def update_group_info(group_uuid):
+def update_group_info(group_uuid, is_log=False):
     """ 用户加群后更新群信息，主要是为了更新群会员信息 """
-    if not group_uuid or group_uuid not in group_infos_dict:
-        return
     group = itchat.update_chatroom(group_uuid, detailedMember=True)
-    if not group:
-        return
     group_info = group_infos_dict[group_uuid]
     group_info['group_uuid'] = group['UserName']
     group_info['count'] = len(group['MemberList'])
-    member_uid_list = uid_list_compile.findall(str(group))  # 根据正则取出群组里所有用户的 uid。
+    member_uid_list = uidlist_compile.findall(str(group))  # 根据正则取出群组里所有用户的 uid。
     if member_uid_list:
         group_info['member_uid_list'] = member_uid_list
     group_infos_dict[group_uuid] = group_info
-    # set_note(u'已更新群聊『{}』成员的信息。'.format(group['NickName']))
+    if is_log:
+        set_note('已更新群聊『{}』成员的信息，当前人数：{} 人。'.format(group['NickName'], len(member_uid_list)))
     return group_info
 
 
 @itchat.msg_register(FRIENDS)
 def add_friends_msg(msg):
-    """ 监听添加好友请求 为了自动同意好友请求 """
+    """ 监听添加好友请求 为了自动同意好友请求"""
+
     if not IS_AUTO_ADD_FRIEND:  # 如果是已关闭添加好友功能，则直接返回
         return
         # print(json.dumps(msg, ensure_ascii=False))
+
+    userid = msg['RecommendInfo']['UserName']
+    nickname = msg['RecommendInfo']['NickName']
+    # 黑名单用户不能加群
+    if userid in black_uuid_list:
+        set_note('黑名单用户『{}』不能通过好友请求'.format(nickname))
+        return
+
     content = msg['RecommendInfo']['Content']  # 获取验证消息
     if add_friend_compile.findall(content):
         time.sleep(random.randint(1, 2))  # 随机休眠（1~3）秒，用于防检测机器人
         itchat.add_friend(**msg['Text'])  # 同意加好友请求
         time.sleep(random.randint(1, 2))
-        itchat.send(note_first_meet_text, msg['RecommendInfo']['UserName'])  # 给刚交的朋友发送欢迎语句
-        note = u'已添加好友「{}」成功。TA 发来的验证消息是：「{}」。'.format(msg['RecommendInfo']['NickName'], content)
+        itchat.send(note_first_meet_text, userid)  # 给刚交的朋友发送欢迎语句
+        note = '已添加好友：{}'.format(nickname)
         set_note(note)
     else:
-        note = u'添加好友「{}」失败。TA 发来的验证消息是：「{}」。'.format(msg['RecommendInfo']['NickName'], content)
+        note = '添加好友失败：用户「{}」 发来的验证消息「{}」。'.format(nickname, content)
         set_note(note)
 
 
@@ -217,9 +230,34 @@ def add_friends_msg(msg):
 def deal_with_msg(msg):
     """ 监听并处理好友消息 """
     # print(json.dumps(msg, ensure_ascii=False))
+
     text = msg["Text"]  # 获取好友发送的话
+    if msg['ToUserName'] == 'filehelper':
+        if text in ('show', u'状态', u'显示', '当前'):
+            notes = []
+            notes.append(u'当前时间:' + get_local_time())
+            notes.append(u'在线时长：' + get_online_time())
+            for group_info in group_infos_dict.values():
+                notes.append(u'群聊『{}』里一共有 {} 人。'.format(group_info['group_name'], str(group_info['count'])))
+            set_note('\n'.join(notes))
+        elif text in ('update', u'更新', u'刷新'):
+            update_all_group_info()
+        else:
+            set_note('I am online...')
+        return
+
     userid = msg['FromUserName']  # 获取好友的 uid
     nickname = msg['User']['NickName']  # 获取好友的昵称
+
+    # 自己发送给别人的消息不作处理
+    if userid == wechat_uuid:
+        return
+
+    # 黑名单用户不能加群
+    if userid in black_uuid_list:
+        set_note('黑名单用户『{}』消息不作任何处理。'.format(nickname))
+        return
+
     is_add_group = add_group_compile.findall(text)  # 检查是否为加群关键词
     if is_add_group and IS_OPEN_ADD_GROUP:
         group_info_list = list(group_infos_dict.values())
@@ -231,14 +269,14 @@ def deal_with_msg(msg):
                     # 发送群邀请
                     itchat.add_member_into_chatroom(group_info['group_uuid'], [{'UserName': userid}],
                                                     useInvitation=True)
-                    note = u'已给『{}』发送加群『{}』邀请通知。'.format(nickname, group_name)
+                    note = '已给『{}』发送加群『{}』邀请通知。'.format(nickname, group_name)
                     set_note(note)
                     break
                 else:
-                    print(u'群聊『{}』人数已满。'.format(group_name))
+                    print('群聊『{}』人数已满。'.format(group_name))
 
             else:  # 用户在已在此群聊中
-                print(u'『{}』已在群聊『{}』中。'.format(nickname, group_name))
+                print('『{}』已在群聊『{}』中。'.format(nickname, group_name))
                 if not IS_ENTER_MULT_GROUP:  # 如果不让加入多个群, 则退出
                     time.sleep(random.randint(1, 2))
                     # 用户已入群，回复消息：请不要重复加群
@@ -252,35 +290,44 @@ def deal_with_msg(msg):
         # 自动回复
         if IS_OPEN_AUTO_REPLY:  # 是否已开启 AI 自动回复
             reply_text = get_nlp_textchat(text, userid)
-            reply_text = reply_text if reply_text else ''
+            if not reply_text:
+                return
             reply_text = reply_text + MSG_SUFFIX
         else:
             reply_text = note_auto_reply_text
-        itchat.send(reply_text, userid)
-        note = u'{}发送来的:{}\n自动回复:{}'.format(nickname, text, reply_text)
-        set_note(note)
+        if note_auto_reply_text:
+            itchat.send(reply_text, userid)
+            note = '\n{}发送来的:{}\n自动回复:{}'.format(nickname, text, reply_text)
+            set_note(note)
 
 
 @itchat.msg_register([NOTE], isGroupChat=True)
 def group_note_msg(msg):
-    """ 群通知消息处理 """
+    """ 群通知处理 """
     # print('NOTE', json.dumps(msg, ensure_ascii=False))
     group_uuid = msg['FromUserName']  # 获取当前群的 uuid
-    if group_uuid in group_infos_dict:  # 判断是否是你注册的群组
+    if group_uuid in group_infos_dict:  # 判断是否为同一个群组
         text = msg['Text']  # 通知的内容
-        group_name = msg['User']['NickName']  # 群聊名称
-        invite_infos = invite_compile.findall(text)  # 判断是否是加入了新用户
-        if invite_infos:
-            inviter_name, invitee_name = invite_infos[0]  # 加入者的昵称
+        invite_names = invite_compile.findall(text)  # 判断是否是加入了新用户
+        if invite_names:  # 用于邀请
+            invite_name = invite_names[0]  # 加入者的昵称
             time.sleep(random.randint(1, 2))
             if note_invite_welcome:
                 # 艾特用户，不过接口已经不支持艾特用户了
-                note = note_invite_welcome.format(atname=invitee_name)
+                note = note_invite_welcome.format(atname=invite_name)
                 itchat.send(note, group_uuid)  # 向群里发送欢迎语句
-
-                log_note = note_invite_info.format(inviter_name, invitee_name, group_name)
-                set_note(log_note)
-            update_group_info(group_uuid)  # 更新群信息
+            update_group_info(group_uuid, True)  # 更新群信息
+            return
+        remove_nicknames = note_remove_complie.findall(text)
+        if remove_nicknames:
+            remove_nickname = remove_nicknames[0]
+            for ml in msg['User']['MemberList']:
+                username = ml['UserName']
+                if remove_nickname == ml['NickName']:
+                    black_uuid_list.append(username)  # 将用户加入黑名单
+                    break
+            update_group_info(group_uuid, True)  # 更新群信息
+            return
 
 
 def is_online():
@@ -300,9 +347,16 @@ def auto_update_group_info():
     """ 自动更新群聊信息，有人退群是收不到信息的。"""
     _time = get_local_time()
     note = '{} 定时更新群聊信息...\n'.format(_time)
+    set_note(note)
+    update_all_group_info()
+
+
+def update_all_group_info():
+    """ 更新所有群信息内容 """
+    note = ''
     for group_uuid in group_infos_dict.keys():
         group_info = update_group_info(group_uuid)
-        note += u'群聊『{}』里一共有 {} 人\n'.format(group_info['group_name'], str(group_info['count']))
+        note += u'群聊『{}』里一共有 {} 人。\n'.format(group_info['group_name'], str(group_info['count']))
     set_note(note)
 
 
@@ -313,19 +367,36 @@ def heart_beat():
     """
     if is_online():
         time.sleep(random.randint(1, 100))
-        time_ = get_local_time()
-        d = ''.join(random.sample(LONG_TEXT, random.randint(10, 20)))
-        note = u"定时心跳...{}-{}".format(time_, d)
+        time_ = datetime.now().strftime('%m-%d %H:%M:%S')
+        ot = get_online_time()
+        # d = ''.join(random.sample(LONG_TEXT, random.randint(10, 20)))
+        note = "当前时间：{}\n在线时长: {}".format(time_, ot)
         set_note(note)
     else:
         exit_callback()
 
 
+def get_online_time():
+    """
+    计算总在线时长
+    :return: str
+    """
+    time_delta = datetime.now() - login_time
+    res = re.findall(time_delta_compile, str(time_delta))
+    if res:
+        return '{:0>2}天{:0>2}时{:0>2}分{:0>2}秒'.format(*res[0])
+    else:
+        return str(time_delta)
+
+
 def exit_callback():
-    """ 微信已经登出 """
-    time_ = get_local_time()
-    title = u'您服务器上的微信「{}」已离线'.format(wechat_nick_name)
-    content = u'离线时间：{} \n 离线原因：未知'.format(time_)
+    """
+    微信已经登出
+    """
+    time_ = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    online_time = get_online_time()
+    title = '您服务器上的微信「{}」已离线'.format(wechat_nick_name)
+    content = '离线时间：{} \n一共在线时长：{} \n离线原因：未知'.format(time_, online_time)
     send_mail(title, content)
     set_note(title + content, True)
     stop_scheduler()
@@ -334,13 +405,12 @@ def exit_callback():
 
 def set_note(note, onle_log=False):
     """
-    日志信息
+    发送日志
     :param note: 日志内容
     :param onle_log: Bool 是否只输出日志，不发送到文件助手中
     :return:
     """
     if not onle_log:
-        # 发送到『文件传输助手』中
         itchat.send(note, 'filehelper')
     print(note)  # 简单日志
 
@@ -361,7 +431,7 @@ def send_mail(title, content):
         return
     try:
         yag.send(to_emails, title, content)
-        print(u'已发送邮件:{}'.format(title))
+        print('已发送邮件:{}'.format(title))
     except Exception as exception:
         print(str(exception))
 
@@ -386,8 +456,6 @@ def get_nlp_textchat(text, userId):
     :param userId: 用户标识
     """
     try:
-        if is_py2:
-            text = text.encode('utf-8')
         hash_md5 = hashlib.md5(userId.encode("UTF-8"))
         userId = hash_md5.hexdigest().upper()
         # 产生随机字符串
@@ -409,7 +477,7 @@ def get_nlp_textchat(text, userId):
                 data_dict = content_dict['data']
                 return data_dict['answer']
             else:
-                print(u'获取数据失败:{}'.format(content_dict['msg']))
+                print('获取数据失败:{}'.format(content_dict['msg']))
     except Exception as exception:
         print(str(exception))
 
@@ -427,10 +495,7 @@ def getReqSign(parser, app_key):
     :return:
     '''
     params = sorted(parser.items())
-    if is_py2:
-        uri_str = urlencode(params)
-    else:
-        uri_str = urlencode(params, encoding="UTF-8")
+    uri_str = parse.urlencode(params, encoding="UTF-8")
     sign_str = '{}&app_key={}'.format(uri_str, app_key)
     # print('sign =', sign_str.strip())
     hash_md5 = hashlib.md5(sign_str.encode("UTF-8"))
@@ -441,11 +506,11 @@ def getReqSign(parser, app_key):
 
 
 if __name__ == '__main__':
+
+    # 如果是window ，mac 系统，用图片扫描方式登录，其他的则用控制台二维码方式。
     if platform.system() in ('Windows', 'Darwin'):
         itchat.auto_login(
-            # hotReload=True,
-            loginCallback=init_info,
-            exitCallback=exit_callback)
+            loginCallback=init_info, exitCallback=exit_callback)
     else:
         # 命令行显示登录二维码。
         itchat.auto_login(enableCmdQR=2, loginCallback=init_info,
@@ -453,10 +518,10 @@ if __name__ == '__main__':
     itchat.run(blockThread=False)
 
     scheduler = BlockingScheduler()
-
-    scheduler.add_job(heart_beat, 'interval', minutes=HEART_BEAT_INTERVAL_MINUTES)  # 用于保持长连接心跳
+    scheduler.add_job(heart_beat, 'interval', minutes=HEART_BEAT_INTERVAL_MINUTES, misfire_grace_time=600)
 
     # 用于自动更新群成员信息。在有多个群，且前面的群人数已满时，让有人退群后，其他人可以加入群
-    scheduler.add_job(auto_update_group_info, 'interval', minutes=UPDATE_GROUP_INFO_INTERVAL_MINUTES)
-
+    scheduler.add_job(auto_update_group_info, 'interval', minutes=UPDATE_GROUP_INFO_INTERVAL_MINUTES,
+                      misfire_grace_time=600)
     scheduler.start()
+
