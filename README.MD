@@ -23,8 +23,13 @@
 
 ![文件助手日志](http://vlog.sfyc23.xyz/wechat_add_group/用文件助手日志.jpg?imageView2/0/w/600/h/800)  ![离线邮箱提醒](http://vlog.sfyc23.xyz/wechat_add_group/离线邮箱提醒.jpg?imageView2/0/w/600/h/800)
 
+其它通过 itchat 实现的项目推荐：
+微信防撤回助手：https://github.com/sfyc23/WechatRevokeProtectHelper
+微信加群助手：https://github.com/sfyc23/WechatAddGroupHelper
+微信机器人与群功能：https://github.com/sfyc23/EverydayWechat
+
 ## 微信体验群 && 交流群
-请加 wx: **sfyc1314** 机器人为好友，验证信息写填写：github，机器人会自动通过。  
+请加 wx: **sfyc1314** 机器人为好友，验证信息写填写：Github，机器人会自动通过。  
 通过后回复：「加群」，会自动拉你入群。  
 机器人二维码： 
 
