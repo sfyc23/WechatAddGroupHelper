@@ -1,4 +1,4 @@
-![python_vesion](https://img.shields.io/badge/Python-3.5%2B-green.svg)   [![itchat_vesion](https://img.shields.io/badge/Itchat-1.3.10-brightgreen.svg)](https://github.com/littlecodersh/ItChat)   [![MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sfyc23/WechatAddGroupHelper/blob/master/LICENSE)               [![weibo](https://img.shields.io/badge/weibo-@sfyc23-red.svg)](https://www.weibo.com/sfyc23)     [![微信群](http://vlog.sfyc23.xyz/wechat_everyday/wxgroup_logo.png?imageView2/0/w/60/h/20)](#微信交流群)
+![python_vesion](https://img.shields.io/badge/Python-3.5%2B-green.svg)   [![itchat_vesion](https://img.shields.io/badge/Itchat-1.3.10-brightgreen.svg)](https://github.com/littlecodersh/ItChat)   [![MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/sfyc23/WechatAddGroupHelper/blob/master/LICENSE)               [![weibo](https://img.shields.io/badge/weibo-@sfyc23-red.svg)](https://www.weibo.com/sfyc23)     [![微信群](http://vlog.sfyc.ltd/wechat_everyday/wxgroup_logo.png?imageView2/0/w/60/h/20)](#微信交流群)
 
 # 基于 itchat 的微信加群助手
 
@@ -47,7 +47,7 @@
 
 捐助方法如下：
 
-![](http://vlog.sfyc23.xyz/wechat_everyday/donation_wechat.png?imageView2/0/w/300/h/300)![](http://vlog.sfyc23.xyz/wechat_everyday/donation_alipay.png?imageView2/0/w/300/h/300)
+![](http://vlog.sfyc.ltd/wechat_everyday/donation_wechat.png?imageView2/0/w/300/h/300)![](http://vlog.sfyc.ltd/wechat_everyday/donation_alipay.png?imageView2/0/w/300/h/300)
 
 
 ## LICENSE
