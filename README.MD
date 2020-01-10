@@ -19,11 +19,11 @@
 
 ## Demo 图
 
-![控制台](http://vlog.sfyc23.xyz/wechat_add_group/加群助手工作台.jpg)  
+![控制台](http://vlog.sfyc.ltd/wechat_add_group/加群助手工作台.jpg)  
 
-![个人聊天页面](http://vlog.sfyc23.xyz/wechat_add_group/个人聊天页面.jpg?imageView2/0/w/600/h/800)  ![新人入群公告](http://vlog.sfyc23.xyz/wechat_add_group/新人入群公告.jpg?imageView2/0/w/600/h/800)
+![个人聊天页面](http://vlog.sfyc.ltd/wechat_add_group/个人聊天页面.jpg?imageView2/0/w/600/h/800)  ![新人入群公告](http://vlog.sfyc.ltd/wechat_add_group/新人入群公告.jpg?imageView2/0/w/600/h/800)
 
-![文件助手日志](http://vlog.sfyc23.xyz/wechat_add_group/用文件助手日志.jpg?imageView2/0/w/600/h/800)  ![离线邮箱提醒](http://vlog.sfyc23.xyz/wechat_add_group/离线邮箱提醒.jpg?imageView2/0/w/600/h/800)
+![文件助手日志](http://vlog.sfyc.ltd/wechat_add_group/用文件助手日志.jpg?imageView2/0/w/600/h/800)  ![离线邮箱提醒](http://vlog.sfyc.ltd/wechat_add_group/离线邮箱提醒.jpg?imageView2/0/w/600/h/800)
 
 其它通过 itchat 实现的项目推荐：  
 微信防撤回助手：https://github.com/sfyc23/WechatRevokeProtectHelper  
